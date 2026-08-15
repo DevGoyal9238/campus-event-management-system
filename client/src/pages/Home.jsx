@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import './Home.css'
 
 function Home() {
@@ -12,7 +13,7 @@ function Home() {
             workshops, cultural fests, and sports tournaments, and register with just one click.
           </p>
           <div className="hero-actions">
-            <button className="btn-explore">Explore Events</button>
+            <Link to="/events" className="btn-explore">Explore Events</Link>
           </div>
         </div>
       </section>

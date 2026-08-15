@@ -1,6 +1,6 @@
 export const sampleEvents = [
   {
-    id: '1',
+    id: 1,
     title: 'Annual Campus Hackathon 2026',
     date: 'August 25, 2026',
     time: '09:00 AM - 06:00 PM',
@@ -10,7 +10,7 @@ export const sampleEvents = [
     totalCapacity: 100
   },
   {
-    id: '2',
+    id: 2,
     title: 'AI & Machine Learning Workshop',
     date: 'September 2, 2026',
     time: '02:00 PM - 05:00 PM',
@@ -20,7 +20,7 @@ export const sampleEvents = [
     totalCapacity: 50
   },
   {
-    id: '3',
+    id: 3,
     title: 'Inter-College Music & Cultural Fest',
     date: 'September 10, 2026',
     time: '05:00 PM - 10:00 PM',
@@ -30,7 +30,7 @@ export const sampleEvents = [
     totalCapacity: 500
   },
   {
-    id: '4',
+    id: 4,
     title: 'Career Fair & Industry Networking',
     date: 'September 18, 2026',
     time: '10:00 AM - 04:00 PM',

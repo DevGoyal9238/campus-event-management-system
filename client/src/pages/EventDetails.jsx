@@ -4,7 +4,7 @@ import './EventDetails.css'
 
 function EventDetails() {
   const { id } = useParams()
-  const event = sampleEvents.find((e) => e.id === id)
+  const event = sampleEvents.find((e) => e.id === Number(id))
 
   if (!event) {
     return (

@@ -23,3 +23,6 @@ yarn-error.log*
 .idea/
 .DS_Store
 Thumbs.db
+
+# Personal preparation notes
+INTERVIEW_PREPARATION_GUIDE.md

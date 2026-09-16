@@ -3,6 +3,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const eventRoutes = require('./routes/eventRoutes');
+const authRoutes = require('./routes/authRoutes');
 
 // Load environment variables from .env
 dotenv.config();
@@ -26,8 +27,9 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Event API Routes
+// API Routes
 app.use('/api/events', eventRoutes);
+app.use('/api/auth', authRoutes);
 
 // Start Express Server
 app.listen(PORT, () => {

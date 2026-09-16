@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Event = require('../models/Event');
+const { protect } = require('../middleware/authMiddleware');
 
 // @route   GET /api/events
 // @desc    Fetch all events from MongoDB sorted by date in ascending order
@@ -213,8 +214,8 @@ router.delete('/:id', async (req, res) => {
 
 // @route   POST /api/events/:id/register
 // @desc    Register for an event and decrement available seats atomically
-// @access  Public
-router.post('/:id/register', async (req, res) => {
+// @access  Private (Protected by JWT)
+router.post('/:id/register', protect, async (req, res) => {
   try {
     const { id } = req.params;
 

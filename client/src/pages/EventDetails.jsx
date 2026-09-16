@@ -52,13 +52,31 @@ function EventDetails() {
       setRegisterSuccess('')
       setRegisterError('')
 
+      // 1. Retrieve JWT token from localStorage
+      const token = localStorage.getItem('token')
+
+      // 2. If no token, block request and inform the user
+      if (!token) {
+        setRegisterError('Please login to register for an event.')
+        setRegistering(false)
+        return
+      }
+
+      // 3. Send POST request with Authorization Bearer header
       const response = await fetch(`http://localhost:5000/api/events/${id}/register`, {
-        method: 'POST'
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
       })
 
       const data = await response.json()
 
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error(data.message || 'Please login again to register for an event.')
+        }
         throw new Error(data.message || 'Registration failed')
       }
 

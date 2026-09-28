@@ -26,6 +26,31 @@ router.get('/', async (req, res) => {
   }
 });
 
+// @route   GET /api/events/my-registrations
+// @desc    Fetch all event registrations for the authenticated user with populated event details
+// @access  Private (Protected by JWT)
+router.get('/my-registrations', protect, async (req, res) => {
+  try {
+    // Query registrations belonging to the authenticated user, populate event details, and sort newest first
+    const registrations = await Registration.find({ userId: req.userId })
+      .populate('eventId', 'title date time venue description totalCapacity availableSeats')
+      .sort({ createdAt: -1 });
+
+    // Return 200 OK with the array of registration documents
+    res.status(200).json({
+      registrations
+    });
+  } catch (error) {
+    // Log internal error for debugging
+    console.error(`Error fetching user registrations: ${error.message}`);
+
+    // Return 500 Internal Server Error without leaking internal details
+    res.status(500).json({
+      message: 'Server error while fetching registrations'
+    });
+  }
+});
+
 // @route   GET /api/events/:id
 // @desc    Fetch a single event by its MongoDB ObjectId
 // @access  Public

@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const Event = require('../models/Event');
 const Registration = require('../models/Registration');
 const { protect } = require('../middleware/authMiddleware');
+const adminMiddleware = require('../middleware/adminMiddleware');
 
 // @route   GET /api/events
 // @desc    Fetch all events from MongoDB sorted by date in ascending order
@@ -89,8 +90,8 @@ router.get('/:id', async (req, res) => {
 
 // @route   POST /api/events
 // @desc    Create a new event
-// @access  Public
-router.post('/', async (req, res) => {
+// @access  Private (Admin only)
+router.post('/', protect, adminMiddleware, async (req, res) => {
   try {
     const {
       title,
@@ -135,8 +136,8 @@ router.post('/', async (req, res) => {
 
 // @route   PUT /api/events/:id
 // @desc    Update an existing event by its MongoDB ObjectId
-// @access  Public
-router.put('/:id', async (req, res) => {
+// @access  Private (Admin only)
+router.put('/:id', protect, adminMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
     const {
@@ -203,20 +204,29 @@ router.put('/:id', async (req, res) => {
 
 // @route   DELETE /api/events/:id
 // @desc    Delete an event by its MongoDB ObjectId
-// @access  Public
-router.delete('/:id', async (req, res) => {
+// @access  Private (Admin only)
+router.delete('/:id', protect, adminMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Find and delete the event document by its MongoDB _id
-    const deletedEvent = await Event.findByIdAndDelete(id);
-
-    // If no event exists with this ID, return 404 Not Found
-    if (!deletedEvent) {
+    // Check if event exists
+    const existingEvent = await Event.findById(id);
+    if (!existingEvent) {
       return res.status(404).json({
         message: 'Event not found'
       });
     }
+
+    // Check whether registrations exist for this event to prevent orphaned records
+    const registrationCount = await Registration.countDocuments({ eventId: id });
+    if (registrationCount > 0) {
+      return res.status(400).json({
+        message: 'Cannot delete an event with existing registrations'
+      });
+    }
+
+    // Find and delete the event document by its MongoDB _id
+    const deletedEvent = await Event.findByIdAndDelete(id);
 
     // Return 200 OK with success message
     res.status(200).json({

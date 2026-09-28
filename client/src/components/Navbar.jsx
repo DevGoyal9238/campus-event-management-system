@@ -6,25 +6,38 @@ function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(
     Boolean(localStorage.getItem('token'))
   )
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('user') || 'null')
+    } catch {
+      return null
+    }
+  })
   const navigate = useNavigate()
   const location = useLocation()
 
+  // Helper to synchronize token and user role state across components
+  const syncAuth = () => {
+    setIsLoggedIn(Boolean(localStorage.getItem('token')))
+    try {
+      setCurrentUser(JSON.parse(localStorage.getItem('user') || 'null'))
+    } catch {
+      setCurrentUser(null)
+    }
+  }
+
   // Listen to custom 'authChange' event to synchronize authentication state across components
   useEffect(() => {
-    const handleAuthChange = () => {
-      setIsLoggedIn(Boolean(localStorage.getItem('token')))
-    }
-
-    window.addEventListener('authChange', handleAuthChange)
+    window.addEventListener('authChange', syncAuth)
 
     return () => {
-      window.removeEventListener('authChange', handleAuthChange)
+      window.removeEventListener('authChange', syncAuth)
     }
   }, [])
 
-  // Sync state on route transition
+  // Sync state on route transitions
   useEffect(() => {
-    setIsLoggedIn(Boolean(localStorage.getItem('token')))
+    syncAuth()
   }, [location])
 
   const handleLogout = () => {
@@ -34,6 +47,7 @@ function Navbar() {
 
     // 2. Immediately update local state so Navbar re-renders in logged-out state
     setIsLoggedIn(false)
+    setCurrentUser(null)
 
     // 3. Broadcast authChange event across application
     window.dispatchEvent(new Event('authChange'))
@@ -54,6 +68,13 @@ function Navbar() {
           <li><Link to="/events" className="nav-link">Events</Link></li>
           {isLoggedIn ? (
             <>
+              {currentUser?.role === 'admin' && (
+                <li>
+                  <Link to="/admin/events" className="nav-link nav-btn-admin">
+                    🛡️ Admin
+                  </Link>
+                </li>
+              )}
               <li><Link to="/my-registrations" className="nav-link nav-btn-secondary">My Registrations</Link></li>
               <li>
                 <button onClick={handleLogout} className="nav-link nav-btn-primary logout-btn">

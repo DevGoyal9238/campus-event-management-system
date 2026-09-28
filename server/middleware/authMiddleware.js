@@ -24,8 +24,9 @@ const protect = (req, res, next) => {
     // Verify the token cryptographic signature and expiration
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Attach authenticated userId to request object for downstream handlers
+    // Attach authenticated userId and userRole to request object for downstream handlers
     req.userId = decoded.userId;
+    req.userRole = decoded.role || 'user';
 
     // Proceed to next middleware or route controller
     next();

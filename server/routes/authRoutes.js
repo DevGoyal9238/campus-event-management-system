@@ -30,11 +30,12 @@ router.post('/register', async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create new user with hashed password
+    // Create new user with hashed password and server-controlled role
     const createdUser = await User.create({
       name,
       email,
-      password: hashedPassword
+      password: hashedPassword,
+      role: 'user'
     });
 
     // Return 201 Created without returning the password
@@ -44,6 +45,7 @@ router.post('/register', async (req, res) => {
         _id: createdUser._id,
         name: createdUser.name,
         email: createdUser.email,
+        role: createdUser.role || 'user',
         createdAt: createdUser.createdAt
       }
     });
@@ -102,9 +104,12 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Generate JWT token with userId payload and 7-day expiration
+    // Generate JWT token with userId and role payload and 7-day expiration
     const token = jwt.sign(
-      { userId: user._id },
+      {
+        userId: user._id,
+        role: user.role || 'user'
+      },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -116,7 +121,8 @@ router.post('/login', async (req, res) => {
       user: {
         _id: user._id,
         name: user.name,
-        email: user.email
+        email: user.email,
+        role: user.role || 'user'
       }
     });
   } catch (error) {

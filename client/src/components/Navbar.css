@@ -80,3 +80,8 @@
 .nav-btn-primary:hover {
   background-color: #4338ca;
 }
+
+.logout-btn {
+  cursor: pointer;
+  user-select: none;
+}

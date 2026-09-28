@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Event = require('../models/Event');
+const Registration = require('../models/Registration');
 const { protect } = require('../middleware/authMiddleware');
 
 // @route   GET /api/events
@@ -213,13 +215,69 @@ router.delete('/:id', async (req, res) => {
 });
 
 // @route   POST /api/events/:id/register
-// @desc    Register for an event and decrement available seats atomically
+// @desc    Register authenticated user for an event and decrement available seats using an ACID transaction
 // @access  Private (Protected by JWT)
 router.post('/:id/register', protect, async (req, res) => {
-  try {
-    const { id } = req.params;
+  const { id } = req.params;
 
-    // Atomically find event and decrement availableSeats if seats > 0
+  // Validate MongoDB ObjectId format before starting session
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({
+      message: 'Invalid event ID format'
+    });
+  }
+
+  // Start a Mongoose session for multi-document ACID transaction
+  const session = await mongoose.startSession();
+
+  try {
+    // Start transaction
+    session.startTransaction();
+
+    // Find the event within the transaction session
+    const event = await Event.findById(id).session(session);
+
+    // If event does not exist, abort transaction and return 404
+    if (!event) {
+      await session.abortTransaction();
+      return res.status(404).json({
+        message: 'Event not found'
+      });
+    }
+
+    // Check if seats are available
+    if (event.availableSeats <= 0) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        message: 'No seats available for this event'
+      });
+    }
+
+    // Check if authenticated user has already registered for this event
+    const existingRegistration = await Registration.findOne({
+      userId: req.userId,
+      eventId: id
+    }).session(session);
+
+    if (existingRegistration) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        message: 'Already registered for this event'
+      });
+    }
+
+    // Create Registration document inside transaction session
+    await Registration.create(
+      [
+        {
+          userId: req.userId,
+          eventId: id
+        }
+      ],
+      { session }
+    );
+
+    // Atomically decrement available seats with conditional check inside transaction session
     const updatedEvent = await Event.findOneAndUpdate(
       {
         _id: id,
@@ -230,30 +288,30 @@ router.post('/:id/register', protect, async (req, res) => {
       },
       {
         new: true, // Return modified document rather than original
-        runValidators: true // Enforce schema validations
+        runValidators: true, // Enforce schema validations
+        session
       }
     );
 
-    // If no document was updated, determine if event does not exist or is fully booked
+    // If seat decrement returned null due to concurrent booking, abort transaction
     if (!updatedEvent) {
-      const existingEvent = await Event.findById(id);
-
-      // If no event exists with this ID, return 404 Not Found
-      if (!existingEvent) {
-        return res.status(404).json({
-          message: 'Event not found'
-        });
-      }
-
-      // If event exists but has 0 seats, return 400 Bad Request
+      await session.abortTransaction();
       return res.status(400).json({
         message: 'No seats available for this event'
       });
     }
 
-    // Return 200 OK with the updated event details
+    // Commit transaction only when both operations succeed
+    await session.commitTransaction();
+
+    // Return 200 OK with the updated event details (compatible with frontend)
     res.status(200).json(updatedEvent);
   } catch (error) {
+    // Abort transaction on any error if still active
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
+
     console.error(`Error registering for event: ${error.message}`);
 
     // Handle invalid MongoDB ObjectId format (CastError)
@@ -263,10 +321,20 @@ router.post('/:id/register', protect, async (req, res) => {
       });
     }
 
-    // Return 500 Internal Server Error for unexpected errors
+    // Handle MongoDB duplicate-key error code 11000 from compound unique index
+    if (error.code === 11000) {
+      return res.status(400).json({
+        message: 'Already registered for this event'
+      });
+    }
+
+    // Return 500 Internal Server Error for unexpected server errors
     res.status(500).json({
       message: 'Server error while registering for event'
     });
+  } finally {
+    // End session to release database connection back to pool
+    session.endSession();
   }
 });
 

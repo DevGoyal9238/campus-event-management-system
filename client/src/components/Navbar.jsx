@@ -1,10 +1,46 @@
-import { Link, useLocation } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import './Navbar.css'
 
 function Navbar() {
-  // useLocation triggers a re-render on route navigation to re-check localStorage token state
+  const [isLoggedIn, setIsLoggedIn] = useState(
+    Boolean(localStorage.getItem('token'))
+  )
+  const navigate = useNavigate()
   const location = useLocation()
-  const token = localStorage.getItem('token')
+
+  // Listen to custom 'authChange' event to synchronize authentication state across components
+  useEffect(() => {
+    const handleAuthChange = () => {
+      setIsLoggedIn(Boolean(localStorage.getItem('token')))
+    }
+
+    window.addEventListener('authChange', handleAuthChange)
+
+    return () => {
+      window.removeEventListener('authChange', handleAuthChange)
+    }
+  }, [])
+
+  // Sync state on route transition
+  useEffect(() => {
+    setIsLoggedIn(Boolean(localStorage.getItem('token')))
+  }, [location])
+
+  const handleLogout = () => {
+    // 1. Remove JWT token and cached user profile from localStorage
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+
+    // 2. Immediately update local state so Navbar re-renders in logged-out state
+    setIsLoggedIn(false)
+
+    // 3. Broadcast authChange event across application
+    window.dispatchEvent(new Event('authChange'))
+
+    // 4. Redirect user to home page
+    navigate('/')
+  }
 
   return (
     <nav className="navbar">
@@ -16,10 +52,14 @@ function Navbar() {
         <ul className="navbar-links">
           <li><Link to="/" className="nav-link">Home</Link></li>
           <li><Link to="/events" className="nav-link">Events</Link></li>
-          {token ? (
+          {isLoggedIn ? (
             <>
               <li><Link to="/my-registrations" className="nav-link nav-btn-secondary">My Registrations</Link></li>
-              <li><span className="nav-link nav-btn-primary logout-btn">Logout</span></li>
+              <li>
+                <button onClick={handleLogout} className="nav-link nav-btn-primary logout-btn">
+                  Logout
+                </button>
+              </li>
             </>
           ) : (
             <>

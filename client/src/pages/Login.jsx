@@ -34,6 +34,9 @@ function Login() {
       localStorage.setItem('token', data.token)
       localStorage.setItem('user', JSON.stringify(data.user))
 
+      // Dispatch custom browser event to notify Navbar of state change
+      window.dispatchEvent(new Event('authChange'))
+
       // Redirect user to home page
       navigate('/')
     } catch (err) {

@@ -56,7 +56,7 @@ function Events() {
       {!loading && !error && events.length === 0 && (
         <div className="status-container empty-state">
           <p className="empty-icon">📅</p>
-          <h3>No Events Found</h3>
+          <h3>No events available right now.</h3>
           <p>There are currently no upcoming events scheduled. Please check back later!</p>
         </div>
       )}

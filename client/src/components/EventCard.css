@@ -1,49 +1,88 @@
 .event-card {
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .event-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: #cbd5e1;
+}
+
+.event-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
 }
 
 .event-card-title {
   font-size: 1.25rem;
   font-weight: 700;
-  color: #1e293b;
-  margin: 0 0 1rem 0;
+  color: var(--color-text-main);
+  margin: 0;
   line-height: 1.35;
+}
+
+.badge-sold-out {
+  background-color: var(--color-error-bg);
+  color: var(--color-error);
+  border: 1px solid var(--color-error-border);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+
+.event-card-body {
+  flex: 1;
 }
 
 .event-card-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 0.6rem;
   margin-bottom: 1rem;
 }
 
 .meta-item {
   font-size: 0.85rem;
   font-weight: 500;
-  color: #4b5563;
-  background-color: #f1f5f9;
-  padding: 0.35rem 0.65rem;
-  border-radius: 6px;
+  color: var(--color-text-muted);
+  background-color: var(--color-border-subtle);
+  padding: 0.3rem 0.6rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid #f1f5f9;
+}
+
+.seats-available {
+  background-color: var(--color-success-bg);
+  color: var(--color-success);
+  border-color: var(--color-success-border);
+  font-weight: 600;
+}
+
+.seats-sold-out {
+  background-color: var(--color-error-bg);
+  color: var(--color-error-text);
+  border-color: var(--color-error-border);
+  font-weight: 600;
 }
 
 .event-card-description {
   font-size: 0.95rem;
-  color: #64748b;
+  color: var(--color-text-muted);
   line-height: 1.5;
-  margin-bottom: 1.5rem;
+  margin: 0 0 1.5rem 0;
 }
 
 .event-card-footer {
@@ -59,14 +98,14 @@
   padding: 0.65rem 1rem;
   font-size: 0.95rem;
   font-weight: 600;
-  color: #4f46e5;
-  background-color: #eff6ff;
-  border: 1px solid #c7d2fe;
-  border-radius: 8px;
+  color: var(--color-primary);
+  background-color: var(--color-primary-light);
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius-md);
   transition: all 0.2s ease;
 }
 
 .btn-view-details:hover {
-  background-color: #4f46e5;
+  background-color: var(--color-primary);
   color: #ffffff;
 }

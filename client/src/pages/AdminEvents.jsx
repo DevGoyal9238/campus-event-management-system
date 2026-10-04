@@ -378,10 +378,10 @@ function AdminEvents() {
                 disabled={formSubmitting}
               >
                 {formSubmitting
-                  ? 'Saving...'
+                  ? (editingId ? 'Saving changes...' : 'Creating event...')
                   : editingId
-                  ? 'Update Event'
-                  : 'Publish Event'}
+                  ? 'Save Changes'
+                  : 'Create Event'}
               </button>
             </div>
           </form>
@@ -391,11 +391,13 @@ function AdminEvents() {
       {/* Events Management Table */}
       {loading ? (
         <div className="status-container">
+          <div className="spinner"></div>
           <p>Loading events...</p>
         </div>
       ) : events.length === 0 ? (
-        <div className="status-container">
-          <h3>No Events in Database</h3>
+        <div className="status-container empty-state">
+          <p className="status-icon">📅</p>
+          <h3>No events have been created yet.</h3>
           <p>Click "Create New Event" above to publish your first campus event.</p>
         </div>
       ) : (

@@ -1,6 +1,6 @@
-# Campus Event Management System
+# UniVerse — University Event Management Platform
 
-A full-stack campus event discovery and registration platform built with **React (Vite)**, **Node.js (Express)**, **Mongoose**, and **MongoDB Atlas**. The system enables students to browse upcoming campus events and register with atomic concurrency guarantees, while providing administrators with protected management tools to create, update, and manage campus events.
+**UniVerse** is a full-stack university event discovery and registration platform built with **React (Vite)**, **Node.js (Express)**, **Mongoose**, and **MongoDB Atlas**. The platform enables students to browse upcoming campus events and register with atomic concurrency guarantees, while providing administrators with protected management tools to create, update, and manage campus events.
 
 ---
 

@@ -1,134 +1,150 @@
 # UniVerse — University Event Management Platform
 
-**UniVerse** is a full-stack university event discovery and registration platform built with **React (Vite)**, **Node.js (Express)**, **Mongoose**, and **MongoDB Atlas**. The platform enables students to browse upcoming campus events and register with atomic concurrency guarantees, while providing administrators with protected management tools to create, update, and manage campus events.
+UniVerse is a full-stack campus event discovery and registration platform built with **React 18 (Vite)**, **Node.js (Express 5)**, **Mongoose 9**, and **MongoDB Atlas**. It enables students to explore upcoming campus events, view real-time seat availability, and book tickets with concurrency guarantees, while providing administrators with secure, role-protected tools to create, edit, and manage event schedules.
+
+- **Live Demo**: [https://campus-event-management-system-seven.vercel.app](https://campus-event-management-system-seven.vercel.app/)
+- **Repository**: [https://github.com/DevGoyal9238/campus-event-management-system](https://github.com/DevGoyal9238/campus-event-management-system)
+- **Deployed Backend Health Check**: [https://universe-api-6aoq.onrender.com/api/health](https://universe-api-6aoq.onrender.com/api/health)
 
 ---
 
 ## Table of Contents
 
 - [Features](#features)
-  - [Student / User Features](#student--user-features)
+  - [Student & Attendee Features](#student--attendee-features)
   - [Administrator Features](#administrator-features)
 - [Tech Stack](#tech-stack)
-- [Architecture Overview](#architecture-overview)
+- [Architecture & Data Flow](#architecture--data-flow)
 - [Project Folder Structure](#project-folder-structure)
 - [Prerequisites](#prerequisites)
 - [Installation & Local Setup](#installation--local-setup)
-- [Environment Variables Setup](#environment-variables-setup)
-- [Running the Project Locally](#running-the-project-locally)
-- [Admin Account Setup](#admin-account-setup)
+- [Environment Variables](#environment-variables)
+- [Running the Application Locally](#running-the-application-locally)
+- [Administrator Account Setup](#administrator-account-setup)
 - [API Documentation](#api-documentation)
+  - [Summary of Endpoints](#summary-of-endpoints)
+  - [Detailed Endpoint Specifications](#detailed-endpoint-specifications)
 - [Core Engineering Concepts](#core-engineering-concepts)
-  - [JWT Authentication](#jwt-authentication)
+  - [JWT Authentication & Client Storage](#jwt-authentication--client-storage)
   - [Role-Based Access Control (RBAC)](#role-based-access-control-rbac)
+  - [Concurrency Control & ACID Transactions](#concurrency-control--acid-transactions)
   - [Duplicate Registration Prevention](#duplicate-registration-prevention)
-  - [ACID Transactions & Seat Concurrency](#acid-transactions--seat-concurrency)
+  - [Security Headers & Rate Limiting](#security-headers--rate-limiting)
 - [Testing & Quality Assurance](#testing--quality-assurance)
-- [Known Limitations & Deployment Notes](#known-limitations--deployment-notes)
+  - [Automated Testing Status](#automated-testing-status)
+  - [Code Quality & Linting](#code-quality--linting)
+  - [Manual Verification Checklist](#manual-verification-checklist)
+- [Deployment](#deployment)
+- [Known Limitations](#known-limitations)
 
 ---
 
 ## Features
 
-### Student / User Features
-- **User Registration**: Register an account with name, email, and password. Plaintext passwords are automatically hashed with bcrypt before storage, and accounts default to the `user` role.
-- **User Authentication**: Login using credentials to receive a signed JWT token valid for 7 days. Client state updates dynamically using a window-level custom authentication event.
-- **Public Event Catalog**: Browse all scheduled campus events sorted chronologically by date.
-- **Event Details View**: Inspect full event details including date, time, venue, comprehensive description, total capacity, and real-time available seats.
-- **Atomic Event Registration**: Reserve a seat for an event with immediate feedback. Prevents bookings when capacity is reached and blocks duplicate attempts.
-- **My Registrations Dashboard**: Authenticated personal view displaying all events a user has registered for, populated with complete event details and sorted newest first.
-- **Persistent Session & Logout**: Sessions persist in browser storage, with clean logout handling that clears credentials and updates UI across navigation components.
+### Student & Attendee Features
+- **Account Registration & Authentication**: Create an account with name, email, and password. Passwords are securely hashed with bcrypt (10 salt rounds), accounts default to the `user` role, and logins issue a signed 7-day JWT token.
+- **Public Event Catalog**: Discover scheduled campus events sorted chronologically by date (`date: 1`).
+- **Detailed Event View**: View comprehensive event descriptions, date, time, venue, total capacity, and real-time available seats.
+- **Atomic Event Registration**: Reserve a seat with immediate UI feedback. Multi-document database transactions ensure seats decrement atomically and prevent overselling.
+- **My Registrations Dashboard**: Authenticated personal dashboard displaying all events the student has booked, populated with full event details and sorted newest first (`createdAt: -1`).
+- **Client Session Management**: Sessions persist in browser `localStorage`, with reactive logout handlers updating UI navigation state across components.
 
 ### Administrator Features
-- **Admin Authentication Guard**: Server-side middleware and frontend route guards protect administrative actions, restricting access to users with `role: "admin"`.
-- **Event Creation**: Admin dashboard form to publish new events with title, date, time, venue, description, total capacity, and initial available seats.
+- **Role-Protected Admin Panel**: Administrative actions are guarded by backend middleware (`adminMiddleware`) and frontend route protection, restricting operations to users with `role: "admin"`.
+- **Event Creation**: Form interface to publish new events with title, schedule, venue, description, total capacity, and initial seat count.
 - **Event Updates**: Edit existing event schedules, descriptions, venues, or seat counts with schema validation enforced.
-- **Safe Event Deletion**: Delete events with built-in referential protection: events with existing registrations cannot be deleted to avoid orphaned records.
-- **Admin Seeding Script**: Dedicated backend script to bootstrap an administrator account in MongoDB Atlas.
+- **Safe Event Deletion**: Prevent orphaned records by blocking deletion of events that already have registered attendees (`Registration.countDocuments > 0`).
+- **CLI Admin Account Provisioning**: Dedicated script (`server/scripts/createAdmin.js`) to safely create or elevate an administrator account via environment variables without hardcoded credentials.
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology | Details |
-| :--- | :--- | :--- |
-| **Frontend** | React 18 (`react`, `react-dom` `^18.3.1`) | Functional components, hooks (`useState`, `useEffect`) |
-| **Build Tool** | Vite 5 (`vite` `^5.4.0`) | ESM dev server, Fast Refresh (`@vitejs/plugin-react` `^4.3.1`) |
-| **Routing** | React Router DOM 7 (`^7.18.2`) | Client-side SPA navigation (`BrowserRouter`, `Routes`, `Route`) |
-| **Styling** | Vanilla CSS | Modular, scoped CSS files per component and page |
-| **Backend Runtime** | Node.js (CommonJS) | REST API server |
-| **Web Framework** | Express 5 (`express` `^5.2.1`) | Middleware, JSON body parsing, route modularization |
-| **Database & ODM** | MongoDB Atlas & Mongoose 9 (`^9.9.4`) | Cloud document store, schema models, ACID transactions, compound indexes |
-| **Security & Auth** | JSON Web Tokens (`jsonwebtoken` `^9.0.3`) | Stateless HMAC-signed authorization tokens (7-day validity) |
-| **Password Hashing** | bcryptjs (`^3.0.3`) | Salted cryptographic password hashing (10 salt rounds) |
-| **CORS** | cors (`^2.8.6`) | Configured for `http://localhost:5173` |
-| **Environment** | dotenv (`^17.4.2`) | Loads environment variables from `server/.env` |
-| **Code Quality** | ESLint 9 (`eslint` `^9.8.0`) | React linting configuration in `client/eslint.config.js` |
+| Layer | Technology | Version / Package | Details |
+| :--- | :--- | :--- | :--- |
+| **Frontend Framework** | React 18 | `react`, `react-dom` `^18.3.1` | Component-driven UI using hooks (`useState`, `useEffect`) |
+| **Build Tool & Bundler** | Vite 5 | `vite` `^5.4.0`, `@vitejs/plugin-react` `^4.3.1` | ESM development server, HMR, and optimized production builds |
+| **Client Routing** | React Router DOM 7 | `react-router-dom` `^7.18.2` | Client-side Single Page Application (SPA) routing |
+| **Styling** | Vanilla CSS | Scoped stylesheets | Responsive CSS layouts without external CSS utility frameworks |
+| **Backend Runtime** | Node.js | CommonJS module system | Event-driven JavaScript runtime environment |
+| **Web Framework** | Express 5 | `express` `^5.2.1` | REST API routing, middleware pipeline, and JSON body parsing |
+| **Database & ODM** | MongoDB Atlas & Mongoose 9 | `mongoose` `^9.9.4` | Cloud document database, schema validation, ACID transactions |
+| **Authentication** | JSON Web Tokens | `jsonwebtoken` `^9.0.3` | Stateless Bearer token authentication (7-day validity) |
+| **Password Hashing** | bcryptjs | `bcryptjs` `^3.0.3` | Cryptographic salted hashing (10 salt rounds) |
+| **Security Headers** | Helmet | `helmet` `^8.3.0` | Sets HTTP response headers (`crossOriginResourcePolicy: 'cross-origin'`) |
+| **Rate Limiting** | express-rate-limit | `express-rate-limit` `^8.7.1` | Throttles brute-force attempts on authentication endpoints |
+| **CORS** | cors | `cors` `^2.8.6` | Dynamic origin validation (`http://localhost:5173` + `CLIENT_URL`) |
+| **Environment Management** | dotenv | `dotenv` `^17.4.2` | Loads environment variables from `.env` files |
+| **Code Quality** | ESLint 9 | `eslint` `^9.8.0` | Static code analysis and linting for React source code |
 
 ---
 
-## Architecture Overview
-
-The system follows a decoupled three-tier client-server architecture:
+## Architecture & Data Flow
 
 ```
-┌────────────────────────────────────────────────────────┐
-│             React Client (Vite @ Port 5173)            │
-│  - SPA Pages (Home, Events, EventDetails, Admin, etc.) │
-│  - State & LocalStorage (JWT Token, User Profile)      │
-└───────────────────────────┬────────────────────────────┘
-                            │
-                            │ HTTP JSON Requests
-                            │ Header: Authorization: Bearer <token>
-                            ▼
-┌────────────────────────────────────────────────────────┐
-│           Express REST API (Node.js @ Port 5000)       │
-│  - CORS Middleware (Origin: http://localhost:5173)     │
-│  - JSON Body Parser                                    │
-│  - Route Handlers (/api/auth, /api/events)             │
-│  - Auth Middleware (protect) & Admin Guard             │
-└───────────────────────────┬────────────────────────────┘
-                            │
-                            │ Mongoose 9 ODM Queries
-                            │ Transaction Sessions & Compound Indexes
-                            ▼
-┌────────────────────────────────────────────────────────┐
-│                   MongoDB Atlas Cluster                │
-│  - Collections: users, events, registrations           │
-│  - Compound Unique Index: { userId: 1, eventId: 1 }    │
-│  - Multi-Document ACID Transactions (Replica Set)      │
-└────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│               React SPA Client (Vite / Vercel)                  │
+│  - Dynamic API URL from VITE_API_BASE_URL (client/src/config)  │
+│  - Auth state & JWT token stored in browser localStorage        │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │
+                                │ HTTP JSON Requests
+                                │ Header: Authorization: Bearer <token>
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│            Express REST API Server (Node.js / Render)           │
+│  - Security Headers: Helmet (cross-origin resource policy)      │
+│  - Dynamic CORS: http://localhost:5173 + CLIENT_URL             │
+│  - Rate Limiting: authLimiter (20 req / 15 min on /api/auth)    │
+│  - Auth Guards: protect (JWT) & adminMiddleware (role: admin)   │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │
+                                │ Mongoose 9 ODM Queries
+                                │ Multi-Document ACID Transactions
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     MongoDB Atlas Cluster                       │
+│  - Collections: users, events, registrations                    │
+│  - Compound Unique Index: { userId: 1, eventId: 1 }             │
+│  - Atomic Concurrency: { availableSeats: { $gt: 0 } }           │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ```mermaid
 flowchart TD
     subgraph Client ["Frontend (React 18 + Vite)"]
-        UI["React SPA (Port 5173)"]
+        UI["React SPA"]
+        Config["API Config (VITE_API_BASE_URL)"]
         Pages["Pages: Home, Events, EventDetails, MyRegistrations, AdminEvents, Login, Register"]
-        Storage["localStorage: JWT Token & User Profile"]
+        Storage["localStorage (JWT Token & User Profile)"]
     end
 
     subgraph Server ["Backend (Node.js + Express 5)"]
-        API["Express Server (Port 5000)"]
-        CORS["CORS Middleware (http://localhost:5173)"]
+        API["Express API Server"]
+        HelmetMW["Helmet Security Headers"]
+        CORSMW["CORS Middleware (CLIENT_URL + localhost:5173)"]
+        RateLimit["express-rate-limit (20 req / 15 min)"]
         AuthMid["authMiddleware (protect)"]
         AdminMid["adminMiddleware (admin role check)"]
         AuthRoutes["Auth Routes (/api/auth)"]
         EventRoutes["Event Routes (/api/events)"]
+        HealthRoute["Health Check (/api/health)"]
     end
 
     subgraph Database ["Database (MongoDB Atlas)"]
         Mongoose["Mongoose 9 ODM"]
         Models["Models: User, Event, Registration"]
-        TX["ACID Transaction Session"]
-        Index["Compound Index: { userId: 1, eventId: 1 }"]
+        TX["ACID Transaction Sessions"]
+        Index["Compound Unique Index: { userId: 1, eventId: 1 }"]
     end
 
     UI --> |REST API Calls / JSON| API
+    Config -.-> UI
     Storage -.-> |Bearer Token| UI
-    API --> CORS --> API
-    API --> AuthRoutes
-    API --> EventRoutes
+    API --> HelmetMW --> CORSMW
+    CORSMW --> HealthRoute
+    CORSMW --> RateLimit --> AuthRoutes
+    CORSMW --> EventRoutes
     AuthRoutes --> AuthMid
     EventRoutes --> AuthMid --> AdminMid
     AuthRoutes --> Mongoose
@@ -146,20 +162,24 @@ flowchart TD
 campus_event_management_system/
 ├── client/                         # Frontend React + Vite SPA
 │   ├── public/                     # Static assets
+│   │   └── vite.svg                # Vite logo asset
 │   ├── src/
-│   │   ├── assets/                 # Image & vector assets
+│   │   ├── assets/                 # Component assets
+│   │   │   └── react.svg           # React logo asset
 │   │   ├── components/             # Reusable UI components
 │   │   │   ├── EventCard.css       # Event card styles
 │   │   │   ├── EventCard.jsx       # Event catalog card component
 │   │   │   ├── Navbar.css          # Navigation bar styles
 │   │   │   └── Navbar.jsx          # Header with reactive auth state
+│   │   ├── config/                 # Dynamic client configuration
+│   │   │   └── api.js              # Centralized API base URL helper
 │   │   ├── data/
-│   │   │   └── mockEvents.js       # Static mock event reference data
-│   │   ├── pages/                  # Routed page views
+│   │   │   └── mockEvents.js       # Fallback reference data
+│   │   ├── pages/                  # Routed SPA page views
 │   │   │   ├── AdminEvents.css     # Admin dashboard styles
 │   │   │   ├── AdminEvents.jsx     # Admin CRUD event management dashboard
 │   │   │   ├── EventDetails.css    # Event details & registration styles
-│   │   │   ├── EventDetails.jsx    # Single event view & registration trigger
+│   │   │   ├── EventDetails.jsx    # Single event view & booking trigger
 │   │   │   ├── Events.css          # Catalog styles
 │   │   │   ├── Events.jsx          # Public event listings catalog
 │   │   │   ├── Home.css            # Landing page styles
@@ -172,11 +192,14 @@ campus_event_management_system/
 │   │   │   └── Register.jsx        # Account registration view
 │   │   ├── App.css                 # Application layout styles
 │   │   ├── App.jsx                 # Route definitions & layout shell
-│   │   ├── index.css               # Global CSS reset and typography
+│   │   ├── index.css               # Global CSS reset and design tokens
 │   │   └── main.jsx                # React DOM root entry point
-│   ├── eslint.config.js            # ESLint flat config
+│   ├── .env.example                # Frontend environment configuration template
+│   ├── .gitignore                  # Frontend git ignore rules
+│   ├── eslint.config.js            # ESLint flat configuration
 │   ├── index.html                  # HTML template
 │   ├── package.json                # Frontend dependencies and scripts
+│   ├── vercel.json                 # Vercel SPA routing rewrites
 │   └── vite.config.js              # Vite bundler configuration
 ├── server/                         # Backend Express REST API
 │   ├── config/
@@ -186,16 +209,17 @@ campus_event_management_system/
 │   │   └── authMiddleware.js       # JWT extraction and verification guard
 │   ├── models/
 │   │   ├── Event.js                # Event schema & model
-│   │   ├── Registration.js         # Registration schema & compound unique index
+│   │   ├── Registration.js         # Registration schema & unique compound index
 │   │   └── User.js                 # User schema & model
 │   ├── routes/
-│   │   ├── authRoutes.js           # /api/auth registration and login routes
-│   │   └── eventRoutes.js          # /api/events CRUD and booking routes
+│   │   ├── authRoutes.js           # Auth routes with rate limiting
+│   │   └── eventRoutes.js          # Event CRUD & transactional registration
 │   ├── scripts/
-│   │   └── createAdmin.js          # CLI script to create/promote admin account
+│   │   └── createAdmin.js          # Secure CLI script to provision admin accounts
 │   ├── package.json                # Backend dependencies and scripts
-│   └── server.js                   # Express application entry point
+│   └── server.js                   # Express application entry point & middleware
 ├── .gitignore                      # Git ignored files (node_modules, .env, dist)
+├── INTERVIEW_PREPARATION_GUIDE.md  # Engineering interview prep guide
 └── README.md                       # Master project documentation
 ```
 
@@ -203,12 +227,12 @@ campus_event_management_system/
 
 ## Prerequisites
 
-Before setting up the project locally, verify that you have the following installed:
+Before running the project locally, verify that you have installed:
 
-- **Node.js**: `v18.0.0` or higher (tested with Node `v24.x`; required for native `node --watch` support and Express 5).
+- **Node.js**: `v18.0.0` or higher (tested with Node `v20.x` / `v24.x`; required for native `node --watch` support and Express 5).
 - **npm**: `v9.0.0` or higher (packaged with Node.js).
 - **MongoDB Atlas Cluster**: A running MongoDB instance configured as a replica set (MongoDB Atlas provides replica sets by default), required for Mongoose multi-document transactions.
-- **Git**: For source control cloning and commits.
+- **Git**: For source control cloning and version tracking.
 
 ---
 
@@ -221,18 +245,18 @@ git clone https://github.com/DevGoyal9238/campus-event-management-system.git
 cd campus-event-management-system
 ```
 
-### 2. Backend Dependencies Installation
+### 2. Install Backend Dependencies
 
-Navigate into `server/` and install dependencies:
+Navigate to the `server/` directory and install dependencies:
 
 ```bash
 cd server
 npm install
 ```
 
-### 3. Frontend Dependencies Installation
+### 3. Install Frontend Dependencies
 
-Open another terminal or navigate into `client/` and install dependencies:
+Navigate to the `client/` directory and install dependencies:
 
 ```bash
 cd ../client
@@ -241,11 +265,11 @@ npm install
 
 ---
 
-## Environment Variables Setup
+## Environment Variables
 
-The backend requires a `.env` file located inside the `server/` directory to connect to MongoDB Atlas and sign JWT tokens.
+### Backend Configuration (`server/.env`)
 
-Create a file named `.env` in `server/`:
+Create a `.env` file inside the `server/` directory:
 
 ```bash
 # Inside campus_event_management_system/server/
@@ -258,20 +282,34 @@ Add the following environment variables (replace placeholder values with your cr
 # Port on which the Express server listens (default: 5000)
 PORT=5000
 
-# MongoDB Atlas connection string (must connect to a replica set/Atlas for transactions)
+# MongoDB Atlas connection string (replica set required for ACID transactions)
 MONGO_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/<database>?retryWrites=true&w=majority
 
 # Cryptographic secret key used to sign and verify JSON Web Tokens
 JWT_SECRET=your_jwt_secret_key_here
+
+# Optional: Allowed client origins for CORS in production (comma-separated if multiple)
+# CLIENT_URL=https://campus-event-management-system-seven.vercel.app
 ```
 
-> **Security Note**: Never commit your real `.env` file or credentials to Git. `server/.env` is ignored by `.gitignore`.
+> **Security Note**: Never commit real database connection strings, JWT secrets, or passwords to Git. The `.env` file is excluded via `.gitignore`.
 
-*Frontend Note*: The React client communicates with `http://localhost:5000` directly as configured in the source code; no `.env` file is required for local frontend development.
+### Frontend Configuration (`client/.env`)
+
+The frontend dynamically loads its API base URL from `VITE_API_BASE_URL` via `client/src/config/api.js`.
+
+During local development, this variable is optional because the client automatically falls back to `http://localhost:5000`. To customize it, create a `.env` or `.env.local` file in `client/` (refer to `client/.env.example`):
+
+```env
+# Base URL for the backend API server
+VITE_API_BASE_URL=http://localhost:5000
+```
+
+For production deployment (e.g., on Vercel), set `VITE_API_BASE_URL` to your live backend URL (e.g., `https://universe-api-6aoq.onrender.com`).
 
 ---
 
-## Running the Project Locally
+## Running the Application Locally
 
 Run the backend and frontend simultaneously in two separate terminals.
 
@@ -282,9 +320,9 @@ cd server
 npm run dev
 ```
 
-- This runs `node --watch server.js`, which restarts the server automatically when server files change.
-- The server starts on `http://localhost:5000`.
-- Verify the server is running by opening: `http://localhost:5000/api/health` in your browser. Expected response:
+- Runs `node --watch server.js`, which restarts automatically on file changes.
+- Listens on `http://localhost:5000`.
+- Verify the server is running by opening `http://localhost:5000/api/health`. Expected response:
   ```json
   { "message": "Campus Event API is running" }
   ```
@@ -296,55 +334,82 @@ cd client
 npm run dev
 ```
 
-- This launches Vite's local dev server.
-- The client is accessible at: `http://localhost:5173`.
-- Open `http://localhost:5173` in your browser to interact with the application.
+- Launches Vite's development server (`vite`).
+- The client application is accessible at `http://localhost:5173`.
+
+### Available Scripts Summary
+
+| Directory | Command | Script | Description |
+| :--- | :--- | :--- | :--- |
+| `server/` | `npm run dev` | `node --watch server.js` | Runs backend in local watch mode |
+| `server/` | `npm start` | `node server.js` | Runs backend in standard production mode |
+| `client/` | `npm run dev` | `vite` | Starts Vite local development server |
+| `client/` | `npm run build` | `vite build` | Compiles optimized static assets into `client/dist/` |
+| `client/` | `npm run preview` | `vite preview` | Previews the compiled production build locally |
+| `client/` | `npm run lint` | `eslint .` | Runs ESLint 9 checks across frontend code |
 
 ---
 
-## Admin Account Setup
+## Administrator Account Setup
 
-By default, any user registered through the `/register` web interface receives the standard `user` role. To perform administrative operations (create, update, delete events), an account with `role: "admin"` is required.
+By default, any user registering via the `/register` web interface receives the standard `user` role. Administrative actions (creating, updating, and deleting events) require an account with `role: "admin"`.
 
-An admin seeding utility is provided in `server/scripts/createAdmin.js`:
+A secure provisioning script is provided in `server/scripts/createAdmin.js`. Credentials are never hardcoded and must be supplied via environment variables (`ADMIN_EMAIL` and `ADMIN_PASSWORD`).
 
+### Provisioning an Administrator Account
+
+Run the script from the `server/` directory, supplying your desired administrator credentials:
+
+**On Linux / macOS / Git Bash:**
 ```bash
 cd server
-node scripts/createAdmin.js
+ADMIN_EMAIL="admin@yourcampus.edu" ADMIN_PASSWORD="your_secure_password" node scripts/createAdmin.js
 ```
 
-**What this script does:**
-1. Connects to the database specified in `server/.env`.
-2. Checks whether `admin@campusevents.com` exists.
-3. If the user does not exist, it creates a new administrator account with:
-   - **Name**: `System Administrator`
-   - **Email**: `admin@campusevents.com`
-   - **Password**: `AdminPassword123` (hashed via bcrypt)
-   - **Role**: `admin`
-4. If the user already exists, it elevates their role to `admin`.
+**On Windows (PowerShell):**
+```powershell
+cd server
+$env:ADMIN_EMAIL="admin@yourcampus.edu"; $env:ADMIN_PASSWORD="your_secure_password"; node scripts/createAdmin.js
+```
 
-Once executed, navigate to `http://localhost:5173/login` and log in with these credentials to access the **🛡️ Admin** dashboard.
+You can optionally supply `ADMIN_NAME` (defaults to `"System Administrator"`):
+```bash
+ADMIN_NAME="Event Coordinator" ADMIN_EMAIL="admin@yourcampus.edu" ADMIN_PASSWORD="your_secure_password" node scripts/createAdmin.js
+```
+
+### Script Security & Behavior:
+1. Reads `ADMIN_EMAIL` and `ADMIN_PASSWORD` from the process environment.
+2. Validates that email syntax is valid and password length is at least 6 characters.
+3. Explicitly rejects insecure or placeholder default credentials to prevent accidental deployment with vulnerable fallbacks.
+4. Hashes the password securely with bcrypt using 10 salt rounds.
+5. Checks if a user with that email already exists:
+   - If the user exists: elevates their role to `admin` and updates their password hash.
+   - If the user does not exist: creates a new user document with `role: "admin"`.
+6. Prints a confirmation message with the password masked as `[SECURED / HASHED]`.
+7. Closes the MongoDB Atlas connection cleanly upon completion.
+
+Once provisioned, navigate to `http://localhost:5173/login`, sign in with your administrator credentials, and access the **🛡️ Admin** dashboard at `/admin/events`.
 
 ---
 
 ## API Documentation
 
-All API routes are served under the `/api` prefix on `http://localhost:5000`.
+All API routes are served under the `/api` prefix on `http://localhost:5000` (or your deployed backend host).
 
 ### Summary of Endpoints
 
 | Method | Endpoint | Access Level | Description |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/api/health` | Public | System health check route |
-| `POST` | `/api/auth/register` | Public | Register new user with hashed password |
-| `POST` | `/api/auth/login` | Public | Authenticate user credentials and return JWT |
-| `GET` | `/api/events` | Public | Fetch all events sorted by date (ascending) |
-| `GET` | `/api/events/:id` | Public | Fetch a single event by its MongoDB ObjectId |
+| `POST` | `/api/auth/register` | Public (Rate Limited) | Register a new user with hashed password |
+| `POST` | `/api/auth/login` | Public (Rate Limited) | Authenticate user credentials and return signed JWT |
+| `GET` | `/api/events` | Public | Fetch all events sorted chronologically by date |
+| `GET` | `/api/events/:id` | Public | Fetch a single event by MongoDB ObjectId |
 | `GET` | `/api/events/my-registrations` | Protected (User) | Fetch registered events for authenticated user |
+| `POST` | `/api/events/:id/register` | Protected (User) | Register user for event using ACID transaction |
 | `POST` | `/api/events` | Protected (Admin) | Create a new campus event |
 | `PUT` | `/api/events/:id` | Protected (Admin) | Update an existing campus event |
 | `DELETE` | `/api/events/:id` | Protected (Admin) | Delete an event (blocked if registrations exist) |
-| `POST` | `/api/events/:id/register` | Protected (User) | Register user for event using ACID transaction |
 
 ---
 
@@ -363,6 +428,8 @@ All API routes are served under the `/api` prefix on `http://localhost:5000`.
 ---
 
 #### 2. Authentication Endpoints
+
+> **Rate Limiting**: Both `/api/auth/register` and `/api/auth/login` are throttled to a maximum of 20 requests per 15-minute window per IP address via `express-rate-limit`. Exceeding this limit returns HTTP `429 Too Many Requests`.
 
 - **`POST /api/auth/register`**
   - **Access**: Public
@@ -387,7 +454,10 @@ All API routes are served under the `/api` prefix on `http://localhost:5000`.
       }
     }
     ```
-  - **Error Responses**: `400 Bad Request` (Missing fields or email already exists), `500 Internal Server Error`.
+  - **Error Responses**:
+    - `400 Bad Request`: Missing fields or email already registered (`User with this email already exists`).
+    - `429 Too Many Requests`: IP rate limit exceeded.
+    - `500 Internal Server Error`: Unexpected database failure.
 
 - **`POST /api/auth/login`**
   - **Access**: Public
@@ -411,7 +481,11 @@ All API routes are served under the `/api` prefix on `http://localhost:5000`.
       }
     }
     ```
-  - **Error Responses**: `400 Bad Request` (Missing fields), `401 Unauthorized` (Invalid email or password).
+  - **Error Responses**:
+    - `400 Bad Request`: Missing email or password.
+    - `401 Unauthorized`: Invalid email or password.
+    - `429 Too Many Requests`: IP rate limit exceeded.
+    - `500 Internal Server Error`: Server failure.
 
 ---
 
@@ -419,7 +493,7 @@ All API routes are served under the `/api` prefix on `http://localhost:5000`.
 
 - **`GET /api/events`**
   - **Access**: Public
-  - **Description**: Returns all events sorted chronologically by date (`date: 1`).
+  - **Description**: Returns all event documents sorted chronologically by date (`date: 1`).
   - **Response `200 OK`**:
     ```json
     [
@@ -441,11 +515,11 @@ All API routes are served under the `/api` prefix on `http://localhost:5000`.
 - **`GET /api/events/:id`**
   - **Access**: Public
   - **Response `200 OK`**: Returns single event object.
-  - **Error Responses**: `400 Bad Request` (Invalid ID format), `404 Not Found` (Event not found).
+  - **Error Responses**: `400 Bad Request` (invalid ObjectId format), `404 Not Found` (event not found).
 
 - **`GET /api/events/my-registrations`**
-  - **Access**: Private (Requires `Authorization: Bearer <token>`)
-  - **Response `200 OK`**:
+  - **Access**: Protected (Requires `Authorization: Bearer <token>`)
+  - **Response `200 OK`**: Returns user registrations with populated event data, sorted newest first (`createdAt: -1`):
     ```json
     {
       "registrations": [
@@ -467,25 +541,26 @@ All API routes are served under the `/api` prefix on `http://localhost:5000`.
       ]
     }
     ```
-  - **Error Responses**: `401 Unauthorized` (Missing or invalid token).
+  - **Error Responses**: `401 Unauthorized` (missing or invalid token).
 
 - **`POST /api/events/:id/register`**
-  - **Access**: Private (Requires `Authorization: Bearer <token>`)
-  - **Description**: Atomically registers the authenticated user and decrements `availableSeats` using a transaction session.
+  - **Access**: Protected (Requires `Authorization: Bearer <token>`)
+  - **Description**: Atomically registers the authenticated user and decrements `availableSeats` using a multi-document ACID transaction.
   - **Response `200 OK`**: Returns updated event object with decremented `availableSeats`.
   - **Error Responses**:
     - `400 Bad Request`: `Invalid event ID format`, `No seats available for this event`, or `Already registered for this event`.
     - `401 Unauthorized`: Token missing or expired.
     - `404 Not Found`: Event does not exist.
+    - `500 Internal Server Error`: Transaction abort or database failure.
 
 ---
 
 #### 4. Admin Event Management
 
-All endpoints require `Authorization: Bearer <admin_token>`.
+All administrative endpoints require `Authorization: Bearer <token>` where the authenticated user has `role: "admin"`.
 
 - **`POST /api/events`**
-  - **Access**: Private (`admin` role required)
+  - **Access**: Protected (Admin only)
   - **Request Body**:
     ```json
     {
@@ -493,23 +568,23 @@ All endpoints require `Authorization: Bearer <admin_token>`.
       "date": "2026-11-15",
       "time": "02:00 PM - 05:00 PM",
       "venue": "Lab 4, Engineering Block",
-      "description": "Practical workshop on reinforcement learning.",
+      "description": "Practical workshop on machine learning fundamentals.",
       "totalCapacity": 60,
       "availableSeats": 60
     }
     ```
-  - **Response `201 Created`**: Returns created event object.
-  - **Error Responses**: `400 Bad Request` (Validation error), `403 Forbidden` (`Admin access required`).
+  - **Response `201 Created`**: Returns created event document.
+  - **Error Responses**: `400 Bad Request` (validation error), `401 Unauthorized`, `403 Forbidden` (`Admin access required`).
 
 - **`PUT /api/events/:id`**
-  - **Access**: Private (`admin` role required)
-  - **Request Body**: Updated fields (matches event schema).
+  - **Access**: Protected (Admin only)
+  - **Request Body**: Updated event schema fields.
   - **Response `200 OK`**: Returns modified event document.
-  - **Error Responses**: `400 Bad Request`, `403 Forbidden`, `404 Not Found`.
+  - **Error Responses**: `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`.
 
 - **`DELETE /api/events/:id`**
-  - **Access**: Private (`admin` role required)
-  - **Description**: Deletes an event. If any user has already registered for this event (`Registration.countDocuments > 0`), the deletion is blocked to prevent dangling records.
+  - **Access**: Protected (Admin only)
+  - **Description**: Deletes an event. If registered attendees exist (`Registration.countDocuments > 0`), the operation is rejected to protect referential integrity.
   - **Response `200 OK`**:
     ```json
     {
@@ -518,24 +593,30 @@ All endpoints require `Authorization: Bearer <admin_token>`.
     ```
   - **Error Responses**:
     - `400 Bad Request`: `"Cannot delete an event with existing registrations"`
+    - `401 Unauthorized`: Token missing or invalid.
     - `403 Forbidden`: `"Admin access required"`
-    - `404 Not Found`: `"Event not found"`
+    - `404 Not Found`: Event does not exist.
 
 ---
 
 ## Core Engineering Concepts
 
-### JWT Authentication
-1. **Token Issuance**: Upon successful login, the server generates a JSON Web Token signed with `process.env.JWT_SECRET` containing the user ID and role:
+### JWT Authentication & Client Storage
+1. **Token Issuance**: When credentials match during login, the backend signs a JSON Web Token with `process.env.JWT_SECRET`:
    ```javascript
-   jwt.sign({ userId: user._id, role: user.role || 'user' }, process.env.JWT_SECRET, { expiresIn: '7d' });
+   jwt.sign(
+     { userId: user._id, role: user.role || 'user' },
+     process.env.JWT_SECRET,
+     { expiresIn: '7d' }
+   );
    ```
-2. **Client Storage & Propagation**: The client stores the token and user profile in `localStorage`. Subsequent authenticated requests include the token in the `Authorization` header (`Bearer <token>`).
-3. **Verification**: The `protect` middleware verifies the cryptographic signature with `jwt.verify()`. Upon success, it attaches `req.userId` and `req.userRole` to the request object. If invalid or expired, it returns `401 Unauthorized`.
+2. **Client Storage & Header Attachment**: The frontend stores the token string and user profile in browser `localStorage`. Subsequent authenticated requests attach the token in the `Authorization` header (`Bearer <token>`).
+3. **Storage Trade-off**: Storing tokens in `localStorage` provides a straightforward, stateless workflow for Single Page Applications without cross-domain cookie configuration. However, values in `localStorage` are accessible to JavaScript running within the origin, making them vulnerable if an XSS attack occurs. In production-hardened systems, `httpOnly`, `SameSite`, and `Secure` cookies provide stronger defense against XSS token extraction.
+4. **Verification**: The `protect` middleware extracts the token, verifies the cryptographic signature with `jwt.verify()`, and attaches `req.userId` and `req.userRole` to the request object. If invalid or expired, it returns HTTP `401`.
 
 ### Role-Based Access Control (RBAC)
-- All new users registering via `POST /api/auth/register` are assigned `role: 'user'` on the server regardless of client input.
-- Protected admin routes pass through `adminMiddleware`:
+- All registrations through `/api/auth/register` are assigned `role: 'user'` on the server, ignoring any role fields sent in the request body.
+- Administrative routes apply `adminMiddleware`:
   ```javascript
   const adminMiddleware = (req, res, next) => {
     if (req.userRole !== 'admin') {
@@ -544,21 +625,16 @@ All endpoints require `Authorization: Bearer <admin_token>`.
     next();
   };
   ```
-- The frontend dynamically displays the **🛡️ Admin** link in `Navbar.jsx` only when `currentUser.role === 'admin'`, and `AdminEvents.jsx` renders access-denied state cards if accessed without admin rights.
+- The frontend dynamically displays the **🛡️ Admin** link in `Navbar.jsx` only when `currentUser.role === 'admin'`, and the `AdminEvents.jsx` page renders access-denied state cards if accessed without admin credentials.
 
-### Duplicate Registration Prevention
-Duplicate registrations are prevented at both the application level and the database level:
-1. **Application Level**: Inside the registration endpoint, the database is queried for an existing registration matching both `userId` and `eventId`. If found, the transaction is aborted with `400 Already registered for this event`.
-2. **Database Level (Enforced Guarantee)**: In `server/models/Registration.js`, a compound unique index is created on `{ userId: 1, eventId: 1 }`:
+### Concurrency Control & ACID Transactions
+To prevent race conditions during simultaneous registrations and guarantee available seat accuracy, `POST /api/events/:id/register` executes within a multi-document ACID transaction session:
+1. **Session Lifecycle**:
    ```javascript
-   registrationSchema.index({ userId: 1, eventId: 1 }, { unique: true });
+   const session = await mongoose.startSession();
+   session.startTransaction();
    ```
-   Even if two requests pass the application check simultaneously, MongoDB rejects the second insert with a duplicate key error (`code: 11000`), preventing duplicate records under race conditions.
-
-### ACID Transactions & Seat Concurrency
-To ensure data consistency between registration records and available seats, the registration endpoint (`POST /api/events/:id/register`) uses a multi-document ACID transaction:
-1. **Session Initialization**: `const session = await mongoose.startSession(); session.startTransaction();`
-2. **Availability Check**: Verifies `event.availableSeats > 0` within the active session.
+2. **Availability Check**: Confirms `event.availableSeats > 0` within the transaction session.
 3. **Atomic Decrement with Query Guard**:
    ```javascript
    const updatedEvent = await Event.findOneAndUpdate(
@@ -567,49 +643,76 @@ To ensure data consistency between registration records and available seats, the
      { new: true, runValidators: true, session }
    );
    ```
-   The conditional check `{ availableSeats: { $gt: 0 } }` ensures that seats cannot decrement below zero even during concurrent writes.
+   The conditional filter `{ availableSeats: { $gt: 0 } }` ensures that seats cannot decrement below zero even during high-concurrency requests.
 4. **Registration Record Creation**: Inserts the new `Registration` document inside the same session.
-5. **Commit / Rollback**: If either operation fails or seats are exhausted, `session.abortTransaction()` reverts all writes. The transaction commits only when both operations succeed.
-6. **Session Cleanup**: `session.endSession()` is guaranteed in a `finally` block to prevent connection leaks.
+5. **Commit / Rollback**: If either operation fails or seats become exhausted, `session.abortTransaction()` reverts all writes. The transaction commits only when both operations succeed.
+6. **Session Cleanup**: `session.endSession()` is guaranteed in a `finally` block to release connection resources back to the pool.
+
+### Duplicate Registration Prevention
+Duplicate registrations are prevented at both the application and database tiers:
+1. **Application Check**: The endpoint queries for an existing registration with `userId` and `eventId`. If found, the transaction is aborted with `400 Already registered for this event`.
+2. **Database Guarantee**: In `server/models/Registration.js`, a compound unique index is enforced on `{ userId: 1, eventId: 1 }`:
+   ```javascript
+   registrationSchema.index({ userId: 1, eventId: 1 }, { unique: true });
+   ```
+   Even under race conditions where two requests pass the application query concurrently, MongoDB Atlas rejects the second insert with a duplicate key error (`code: 11000`), preserving data integrity.
+
+### Security Headers & Rate Limiting
+- **Helmet**: In `server/server.js`, Helmet configures secure HTTP response headers, with `crossOriginResourcePolicy: { policy: 'cross-origin' }` to permit cross-origin consumption by the deployed frontend.
+- **Rate Limiting**: `express-rate-limit` is configured on authentication routes (`/api/auth/register` and `/api/auth/login`) with a 15-minute window and a 20-request threshold per IP, mitigating brute-force credential stuffing.
 
 ---
 
 ## Testing & Quality Assurance
 
 ### Automated Testing Status
-- **Current State**: Automated test suites (e.g., Jest, Vitest, Mocha, Supertest) are not currently configured in the repository.
-- <!-- TODO: Add automated unit and integration test suites (e.g. Vitest for client, Jest/Supertest for server routes) -->
+- **Current State**: Automated test suites (such as Jest, Vitest, Mocha, or Supertest) are not currently configured in this repository.
+- Development verification is carried out via static code linting and manual verification workflows.
 
-### Available Code Quality Script
-
-- **Frontend Linting**:
-  To execute ESLint checks across the React codebase:
-  ```bash
-  cd client
-  npm run lint
-  ```
+### Code Quality & Linting
+The frontend repository includes ESLint 9 configuration (`client/eslint.config.js`). To run linting checks across React files:
+```bash
+cd client
+npm run lint
+```
 
 ### Manual Verification Checklist
-1. **Health Check**: Open `http://localhost:5000/api/health` and verify the status message.
-2. **User Registration & Login**: Register a new student account at `http://localhost:5173/register`, log in at `/login`, and verify token storage in browser `localStorage`.
-3. **Event Booking**: Navigate to `/events`, select an event, click "Register for Event", and confirm the available seat count decrements by 1.
-4. **Duplicate Prevention Check**: Attempt to register for the same event again; verify that the system blocks the registration with `"Already registered for this event"`.
-5. **My Registrations**: Open `/my-registrations` and verify the newly booked event appears in the list.
-6. **Admin Authorization Guard**: Run `node scripts/createAdmin.js` in `server/`, log in with `admin@campusevents.com`, and verify access to `/admin/events` for creating and updating events.
+1. **API Health Check**: Navigate to `http://localhost:5000/api/health` and verify the `{ "message": "Campus Event API is running" }` response.
+2. **User Registration & Login**: Register a student account at `http://localhost:5173/register`, log in at `/login`, and verify token storage in browser `localStorage`.
+3. **Event Booking**: Navigate to `/events`, open an event, click "Register for Event", and confirm the available seat count decrements by 1.
+4. **Duplicate Registration Check**: Attempt to register for the same event again; verify the system blocks the action with `"Already registered for this event"`.
+5. **My Registrations View**: Open `/my-registrations` and verify the newly booked event appears with correct title, schedule, and venue details.
+6. **Admin Authorization Guard**: Run `node scripts/createAdmin.js` with `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `server/`, sign in with the admin account, and verify full CRUD access on `/admin/events`.
 
 ---
 
-## Known Limitations & Deployment Notes
+## Deployment
 
-- **Client API Base URL**: Client components (`Events.jsx`, `EventDetails.jsx`, `Login.jsx`, etc.) currently hardcode `http://localhost:5000` as the API host. For production deployment, configure an environment variable (e.g., `import.meta.env.VITE_API_BASE_URL`).
-- <!-- TODO: Refactor hardcoded http://localhost:5000 in client components to use import.meta.env.VITE_API_BASE_URL -->
-- **Token Storage**: JWT tokens are stored in browser `localStorage`. For production hardening against XSS vulnerabilities, consider migrating to `httpOnly` secure cookies.
-- <!-- TODO: Migrate JWT token storage from localStorage to secure httpOnly cookies -->
-- **MongoDB Replica Set Requirement**: Multi-document ACID transactions require MongoDB Atlas or a local replica set. Standalone local MongoDB instances without replica sets will reject transaction sessions.
-- **CORS Configuration**: In `server/server.js`, CORS is restricted to `http://localhost:5173`. When deploying to production, update the allowed origin to the production frontend URL.
-- <!-- TODO: Parameterize CORS origin via environment variables for staging/production deployment -->
-- **Registration Cancellation**: The API and UI currently support event registration and viewing bookings, but do not provide an endpoint or UI button to cancel an existing registration or release a seat back to inventory.
-- <!-- TODO: Implement DELETE /api/events/:id/register or cancel registration endpoint with transactional seat increment -->
-- **Production Builds**:
-  - Frontend: `npm run build` in `client/` produces an optimized static build in `client/dist/`.
-  - Backend: `npm start` in `server/` runs `node server.js` without `--watch`.
+The platform is deployed using a decoupled architecture:
+
+- **Frontend**: Hosted on [Vercel](https://campus-event-management-system-seven.vercel.app/).
+  - Client routing is handled via `client/vercel.json`, which rewrites incoming paths to `/index.html` for React Router SPA navigation:
+    ```json
+    {
+      "rewrites": [
+        {
+          "source": "/(.*)",
+          "destination": "/index.html"
+        }
+      ]
+    }
+    ```
+  - Frontend API requests target the deployed backend via the `VITE_API_BASE_URL` environment variable configured in Vercel settings.
+- **Backend**: Hosted on [Render](https://universe-api-6aoq.onrender.com) as a Node.js Web Service.
+  - Deployed health endpoint: [https://universe-api-6aoq.onrender.com/api/health](https://universe-api-6aoq.onrender.com/api/health)
+  - Configured with environment variables `MONGO_URI`, `JWT_SECRET`, `PORT`, and `CLIENT_URL=https://campus-event-management-system-seven.vercel.app`.
+  - CORS dynamically permits requests from the production Vercel client origin.
+- **Database**: Cloud-hosted [MongoDB Atlas](https://www.mongodb.com/atlas) cluster providing replica set support for ACID transaction sessions.
+
+---
+
+## Known Limitations
+
+- **Client Token Storage (XSS Consideration)**: JWT tokens are stored in browser `localStorage` for client-side state accessibility. In production hardening against cross-site scripting (XSS), migrating to `httpOnly`, `SameSite`, and `Secure` cookies is recommended.
+- **Registration Cancellation**: The current implementation allows students to register for events and view their bookings, but does not include an endpoint or interface to cancel an existing registration or restore seats to available inventory.
+- **MongoDB Replica Set Prerequisite**: Multi-document ACID transactions require a MongoDB replica set (standard on MongoDB Atlas). Standalone local MongoDB installations without replica set initialization will reject transaction sessions.

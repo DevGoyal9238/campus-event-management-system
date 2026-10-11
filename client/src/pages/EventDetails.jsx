@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { getApiUrl } from '../config/api'
 import './EventDetails.css'
 
 function EventDetails() {
@@ -20,7 +21,7 @@ function EventDetails() {
       try {
         setLoading(true)
         setError(null)
-        const response = await fetch(`http://localhost:5000/api/events/${id}`)
+        const response = await fetch(getApiUrl(`/api/events/${id}`))
 
         if (!response.ok) {
           if (response.status === 404) {
@@ -59,7 +60,7 @@ function EventDetails() {
       setRegisterSuccess('')
       setRegisterError('')
 
-      const response = await fetch(`http://localhost:5000/api/events/${id}/register`, {
+      const response = await fetch(getApiUrl(`/api/events/${id}/register`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

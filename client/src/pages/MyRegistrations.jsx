@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { getApiUrl } from '../config/api'
 import './MyRegistrations.css'
 
 function MyRegistrations() {
@@ -35,7 +36,7 @@ function MyRegistrations() {
       setError(null)
       setIsAuthError(false)
 
-      const response = await fetch('http://localhost:5000/api/events/my-registrations', {
+      const response = await fetch(getApiUrl('/api/events/my-registrations'), {
         headers: {
           'Authorization': `Bearer ${token}`
         }

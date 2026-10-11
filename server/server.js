@@ -14,8 +14,34 @@ connectDB();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Enable CORS for frontend client
-app.use(cors({ origin: 'http://localhost:5173' }));
+// Configure allowed origins for CORS
+const allowedOrigins = ['http://localhost:5173'];
+
+if (process.env.CLIENT_URL) {
+  process.env.CLIENT_URL.split(',').forEach((url) => {
+    const trimmed = url.trim().replace(/\/+$/, '');
+    if (trimmed && !allowedOrigins.includes(trimmed)) {
+      allowedOrigins.push(trimmed);
+    }
+  });
+}
+
+// Enable CORS with dynamic origin validation
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no Origin header (e.g. mobile apps, curl, Postman, health check pings)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(null, false);
+    },
+    credentials: true
+  })
+);
 
 // Middleware to parse incoming JSON requests
 app.use(express.json());

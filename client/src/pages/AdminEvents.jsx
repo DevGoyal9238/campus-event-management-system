@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { getApiUrl } from '../config/api'
 import './AdminEvents.css'
 
 function AdminEvents() {
@@ -50,7 +51,7 @@ function AdminEvents() {
     try {
       setLoading(true)
       setError('')
-      const response = await fetch('http://localhost:5000/api/events')
+      const response = await fetch(getApiUrl('/api/events'))
       if (!response.ok) {
         throw new Error(`Failed to load events (${response.status})`)
       }
@@ -136,8 +137,8 @@ function AdminEvents() {
       }
 
       const url = editingId
-        ? `http://localhost:5000/api/events/${editingId}`
-        : 'http://localhost:5000/api/events'
+        ? getApiUrl(`/api/events/${editingId}`)
+        : getApiUrl('/api/events')
 
       const method = editingId ? 'PUT' : 'POST'
 
@@ -176,7 +177,7 @@ function AdminEvents() {
     setSuccess('')
 
     try {
-      const response = await fetch(`http://localhost:5000/api/events/${id}`, {
+      const response = await fetch(getApiUrl(`/api/events/${id}`), {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

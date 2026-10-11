@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import EventCard from '../components/EventCard'
+import { getApiUrl } from '../config/api'
 import './Events.css'
 
 function Events() {
@@ -11,7 +12,7 @@ function Events() {
     try {
       setLoading(true)
       setError(null)
-      const response = await fetch('http://localhost:5000/api/events')
+      const response = await fetch(getApiUrl('/api/events'))
 
       if (!response.ok) {
         throw new Error(`Failed to fetch events: ${response.status} ${response.statusText}`)

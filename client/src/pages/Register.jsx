@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { getApiUrl } from '../config/api'
 import './Register.css'
 
 function Register() {
@@ -17,7 +18,7 @@ function Register() {
     setLoading(true)
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/register', {
+      const response = await fetch(getApiUrl('/api/auth/register'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

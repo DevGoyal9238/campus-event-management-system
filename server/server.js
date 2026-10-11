@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const eventRoutes = require('./routes/eventRoutes');
@@ -13,6 +14,16 @@ connectDB();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Set HTTP security headers with helmet
+// Note: contentSecurityPolicy is disabled because this is a decoupled JSON REST API.
+// crossOriginResourcePolicy is set to 'cross-origin' to allow the separate deployed frontend (e.g. Vercel) to consume API responses.
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' }
+  })
+);
 
 // Configure allowed origins for CORS
 const allowedOrigins = ['http://localhost:5173'];

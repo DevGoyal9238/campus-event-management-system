@@ -2,12 +2,25 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
 const User = require('../models/User');
+
+// Rate limiter for authentication routes (defends against brute-force credential stuffing and registration flooding)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15-minute window
+  max: 20, // Limit each IP to 20 attempts per 15 minutes
+  standardHeaders: true, // Return standard RateLimit-* headers
+  legacyHeaders: false, // Disable legacy X-RateLimit-* headers
+  statusCode: 429,
+  message: {
+    message: 'Too many authentication attempts from this IP, please try again after 15 minutes'
+  }
+});
 
 // @route   POST /api/auth/register
 // @desc    Register a new user with hashed password
 // @access  Public
-router.post('/register', async (req, res) => {
+router.post('/register', authLimiter, async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
@@ -77,7 +90,7 @@ router.post('/register', async (req, res) => {
 // @route   POST /api/auth/login
 // @desc    Authenticate user and return JWT token
 // @access  Public
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 
